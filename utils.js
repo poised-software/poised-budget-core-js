@@ -1,3 +1,6 @@
+import PouchDB from 'pouchdb'
+import openpgp from 'openpgp'
+
 async function saveBudget(event, password) {
     event.preventDefault();
     const params = new URLSearchParams(document.location.search);

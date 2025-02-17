@@ -1,0 +1,23 @@
+{
+  "name": "poised-budget-core",
+  "version": "0.0.2",
+  "description": "Core JS utils for Poised Budget",
+  "main": "utils.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/poised-software/poised-budget-core-js.git"
+  },
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/poised-software/poised-budget-core-js/issues"
+  },
+  "homepage": "https://github.com/poised-software/poised-budget-core-js#readme",
+  "dependencies": {
+    "openpgp": "^6.1.0",
+    "pouchdb": "^9.0.0"
+  }
+}

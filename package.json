@@ -1,6 +1,6 @@
 {
   "name": "poised-budget-core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Core JS utils for Poised Budget",
   "main": "utils.js",
   "scripts": {

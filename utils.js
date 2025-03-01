@@ -1,5 +1,5 @@
-import PouchDB from 'pouchdb'
-import openpgp from 'openpgp'
+import * as PouchDB from 'pouchdb'
+import * as openpgp from 'openpgp'
 
 export async function saveBudget(event, password) {
     event.preventDefault();

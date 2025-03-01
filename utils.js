@@ -1,4 +1,4 @@
-async function saveBudget(PouchDB, openpgp, event, password) {
+export async function saveBudget(PouchDB, openpgp, event, password) {
     event.preventDefault();
     const params = new URLSearchParams(document.location.search);
     const values = [...document.getElementsByTagName("input")].map(el => ({ id: el.id, value: parseFloat(el.value) })).filter(cat => cat.value !== 0);
@@ -16,7 +16,7 @@ async function saveBudget(PouchDB, openpgp, event, password) {
     budgetDB.put(budget);
 }
 
-async function createNewCategoriesFromParams(PouchDB, openpgp, params, password) {
+export async function createNewCategoriesFromParams(PouchDB, openpgp, params, password) {
     const rawJSON = params.get("json");
     const json = JSON.parse(rawJSON);
     if (json.poisedBudgetVersion !== "0.0.1") {
@@ -61,7 +61,7 @@ async function createNewCategoriesFromParams(PouchDB, openpgp, params, password)
     }
 }
 
-async function getCurrentBudget(PouchDB, openpgp, params, password) {
+export async function getCurrentBudget(PouchDB, openpgp, params, password) {
     const budgetDB = new PouchDB("budgets");
     const budgetID = await findAssociatedCipher(openpgp, budgetDB, params.get("budgetMonth"), password);
 
@@ -75,7 +75,7 @@ async function getCurrentBudget(PouchDB, openpgp, params, password) {
     return JSON.parse(decryptedBudget);
 }
 
-async function getCategories(PouchDB, openpgp, params, password) {
+export async function getCategories(PouchDB, openpgp, params, password) {
     const categoriesDB = new PouchDB("categories");
     let categoryResults = await categoriesDB.allDocs({ include_docs: true });
     if (categoryResults.total_rows === 0) {
@@ -100,7 +100,7 @@ async function findAssociatedCipher(openpgp, db, plaintext, password) {
     return associatedCiphers.filter((p) => p.plaintext === plaintext)[0]?.cipher || "";
 }
 
-async function decryptAllDocs(openpgp, rows, password) {
+export async function decryptAllDocs(openpgp, rows, password) {
     const flatRows = rows.flatMap(r => r.doc)
     await Promise.all(flatRows.map(async d => await decryptDoc(openpgp, d, password)));
 }
@@ -129,5 +129,3 @@ async function decryptText(openpgp, ciphertext, password) {
     const { data, ...other } = await openpgp.decrypt({ message, passwords: [password] });
     return data
 }
-
-export { saveBudget, createNewCategoriesFromParams, getCurrentBudget, getCategories, decryptAllDocs }

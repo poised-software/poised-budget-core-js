@@ -5,11 +5,10 @@ export async function saveBudget(PouchDB, openpgp, event, password) {
     console.log(values)
 
     const budgetDB = new PouchDB("budgets");
-    const _id = await encryptText(openpgp, params.get("budgetMonth"), password);
     const month = await encryptText(openpgp, params.get("budgetMonth").slice('_')[0], password);
     const budgetValues = await encryptText(openpgp, JSON.stringify(values), password);
     const budget = {
-        "_id": _id,
+        "_id": (new Date).toISOString(),
         "month": month,
         "budget": budgetValues
     }
@@ -31,7 +30,7 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
         const categroyName = await encryptText(openpgp, category.name, password);
         const categoryOrder = await encryptText(openpgp, JSON.stringify(category.order), password);
         const doc = {
-            "_id": categroyName,
+            "_id": (new Date).toISOString(),
             "name": categroyName,
             "order": categoryOrder
         };
@@ -43,7 +42,7 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
             const subCategoryName = await encryptText(openpgp, subCategory.name, password);
             const subCategoryOrder = await encryptText(openpgp, JSON.stringify(subCategory.order), password);
             const doc = {
-                "_id": subCategoryName,
+                "_id": (new Date).toISOString(),
                 "name": subCategoryName,
                 "order": subCategoryOrder,
                 "category": categroyName
@@ -63,7 +62,8 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
 
 export async function getCurrentBudget(PouchDB, openpgp, params, password) {
     const budgetDB = new PouchDB("budgets");
-    const budgetID = await findAssociatedCipher(openpgp, budgetDB, params.get("budgetMonth"), password);
+    // There should only be one budget per month so use the first cipher
+    const budgetID = await (findAssociatedCiphers(openpgp, budgetDB, params.get("budgetMonth"), password))[0];
 
     if (!budgetID) {
         console.log("Could not find document. Loading empty budget...")
@@ -91,13 +91,30 @@ export async function getCategories(PouchDB, openpgp, params, password) {
 
 // This is necessary because, unlike a hash, different ciphers are generated
 // by openpgp.js for the same text. This makes it more secure, but it also increases complexity.
-// Returns empty string if there is no associated cipher.
-async function findAssociatedCipher(openpgp, db, plaintext, password) {
+// Returns an array of associated ciphers
+// Returns empty array if there is no associated cipher.
+async function findAssociatedCiphers(openpgp, db, plaintext, password) {
     const all = await db.allDocs();
     // Returns array like: [{ cipher: "PGP989778", plaintext: "January_2025" }, { cipher: "PGP789783", plaintext: "February_2025" }]
     const associatedCiphers = await Promise.all(all.rows.map(async (r) => ({ cipher: r.id, plaintext: await decryptText(openpgp, r.id, password) })));
-    // There should be only one cipher per plaintext
-    return associatedCiphers.filter((p) => p.plaintext === plaintext)[0]?.cipher || "";
+    return associatedCiphers.filter((p) => p.plaintext === plaintext).map(c => c.cipher) || [];
+}
+
+async function decryptDocIdsUntil(openpgp, db, conditional) {
+    const all = await db.allDocs();
+    const associatedCiphers = [];
+
+    for (r in all.rows) {
+        const doc = all.rows[r];
+        const plaintext = await decryptText(openpgp, doc.id, password)
+        associatedCiphers.push({cipher: doc.id, plaintext: plaintext})
+        if (conditional(plaintext)) {
+            return associatedCiphers;
+        }
+        console.log("Still going...")
+    }
+
+    return associatedCiphers;
 }
 
 export async function decryptAllDocs(openpgp, rows, password) {

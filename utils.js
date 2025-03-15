@@ -5,11 +5,9 @@ export async function saveBudget(PouchDB, openpgp, event, password) {
     console.log(values)
 
     const budgetDB = new PouchDB("budgets");
-    const month = await encryptText(openpgp, params.get("budgetMonth").slice('_')[0], password);
     const budgetValues = await encryptText(openpgp, JSON.stringify(values), password);
     const budget = {
         "_id": (new Date).toISOString(),
-        "month": month,
         "budget": budgetValues
     }
     budgetDB.put(budget);
@@ -62,16 +60,16 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
 
 export async function getCurrentBudget(PouchDB, openpgp, params, password) {
     const budgetDB = new PouchDB("budgets");
-    // There should only be one budget per month so use the first cipher
-    const budgetID = await (findAssociatedCiphers(openpgp, budgetDB, params.get("budgetMonth"), password))[0];
+    const budgetMonth = (new Date(params.get("budgetMonth"))).toISOString().slice(0, 7);
+    // There should only be one budget per month so use the first one
+    const budget = (await budgetDB.allDocs({ include_docs: true, startkey: budgetMonth, endkey: `${budgetMonth}\ufff0` })).rows[0]?.doc.budget
 
-    if (!budgetID) {
+    if (!budget) {
         console.log("Could not find document. Loading empty budget...")
         return [];
     }
 
-    const encryptedBlob = await budgetDB.get(budgetID);
-    const decryptedBudget = await decryptText(openpgp, encryptedBlob.budget, password)
+    const decryptedBudget = await decryptText(openpgp, budget, password)
     return JSON.parse(decryptedBudget);
 }
 
@@ -87,34 +85,6 @@ export async function getCategories(PouchDB, openpgp, params, password) {
         sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.rows.flatMap(c => c.doc)));
     }
     return JSON.parse(sessionStorage.getItem("decryptedCategories"));
-}
-
-// This is necessary because, unlike a hash, different ciphers are generated
-// by openpgp.js for the same text. This makes it more secure, but it also increases complexity.
-// Returns an array of associated ciphers
-// Returns empty array if there is no associated cipher.
-async function findAssociatedCiphers(openpgp, db, plaintext, password) {
-    const all = await db.allDocs();
-    // Returns array like: [{ cipher: "PGP989778", plaintext: "January_2025" }, { cipher: "PGP789783", plaintext: "February_2025" }]
-    const associatedCiphers = await Promise.all(all.rows.map(async (r) => ({ cipher: r.id, plaintext: await decryptText(openpgp, r.id, password) })));
-    return associatedCiphers.filter((p) => p.plaintext === plaintext).map(c => c.cipher) || [];
-}
-
-async function decryptDocIdsUntil(openpgp, db, conditional) {
-    const all = await db.allDocs();
-    const associatedCiphers = [];
-
-    for (r in all.rows) {
-        const doc = all.rows[r];
-        const plaintext = await decryptText(openpgp, doc.id, password)
-        associatedCiphers.push({cipher: doc.id, plaintext: plaintext})
-        if (conditional(plaintext)) {
-            return associatedCiphers;
-        }
-        console.log("Still going...")
-    }
-
-    return associatedCiphers;
 }
 
 export async function decryptAllDocs(openpgp, rows, password) {

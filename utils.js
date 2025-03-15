@@ -7,7 +7,7 @@ export async function saveBudget(PouchDB, openpgp, event, password) {
     const budgetDB = new PouchDB("budgets");
     const budgetValues = await encryptText(openpgp, JSON.stringify(values), password);
     const budget = {
-        "_id": (new Date).toISOString(),
+        "_id": params.get("budgetMonth"),
         "budget": budgetValues
     }
     budgetDB.put(budget);
@@ -60,7 +60,7 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
 
 export async function getCurrentBudget(PouchDB, openpgp, params, password) {
     const budgetDB = new PouchDB("budgets");
-    const budgetMonth = (new Date(params.get("budgetMonth"))).toISOString().slice(0, 7);
+    const budgetMonth = params.get("budgetMonth");
     // There should only be one budget per month so use the first one
     const budget = (await budgetDB.allDocs({ include_docs: true, startkey: budgetMonth, endkey: `${budgetMonth}\ufff0` })).rows[0]?.doc.budget
 

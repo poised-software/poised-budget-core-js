@@ -87,6 +87,15 @@ export async function getCategories(PouchDB, openpgp, params, password) {
     return JSON.parse(sessionStorage.getItem("decryptedCategories"));
 }
 
+export async function getTransactionsBetween(PouchDB, openpgp, start, end, password) {
+    const transactionsDB = new PouchDB("transactions");
+    const transactions = (await transactionsDB.allDocs({ include_docs: true, startkey: start, endkey: end })).rows;
+    if (transactions.length === 0) {
+        return [];
+    }
+    return JSON.parse(await decryptAllDocs(openpgp, transactions, password));
+}
+
 export async function decryptAllDocs(openpgp, rows, password) {
     const flatRows = rows.flatMap(r => r.doc)
     await Promise.all(flatRows.map(async d => await decryptDoc(openpgp, d, password)));

@@ -31,9 +31,11 @@ export async function getCurrentBudget(PouchDB, openpgp, params, password) {
 export async function getCategories(PouchDB, openpgp, params, password) {
     const categoriesDB = new PouchDB("categories");
     let categoryResults = await categoriesDB.allDocs({ include_docs: true });
+    console.log(categoryResults)
     if (categoryResults.total_rows === 0) {
         await createNewCategoriesFromParams(PouchDB, openpgp, params, password);
         categoryResults = await categoriesDB.allDocs({ include_docs: true });
+        console.log(categoryResults)
     }
     if (!sessionStorage.getItem("decryptedCategories")) {
         console.log(categoryResults)

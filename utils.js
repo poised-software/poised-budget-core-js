@@ -40,6 +40,9 @@ export async function getCategories(PouchDB, openpgp, params, password) {
         categoryResults = await categoriesDB.allDocs({ include_docs: true });
     }
     console.log(categoryResults);
+    const decryptedCategories = await decryptAllDocs(openpgp, categoryResults.rows, password);
+    sessionStorage.setItem("decryptedCategories", JSON.stringify(decryptedCategories));
+    return decryptedCategories;
     // const categoriesDB = new PouchDB("categories");
     // let categoryResults = await categoriesDB.allDocs({ include_docs: true });
     // console.log(categoryResults)

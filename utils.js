@@ -105,6 +105,7 @@ export function getNextOrPreviousMonth(budgetMonth, next = true) {
 }
 
 export async function decryptAllDocs(openpgp, rows, password) {
+    console.log(rows)
     const flatRows = rows.flatMap(r => r.doc)
     await Promise.all(flatRows.map(async d => await decryptDoc(openpgp, d, password)));
 }

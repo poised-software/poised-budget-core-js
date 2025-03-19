@@ -29,23 +29,34 @@ export async function getCurrentBudget(PouchDB, openpgp, params, password) {
 }
 
 export async function getCategories(PouchDB, openpgp, params, password) {
+    if (sessionStorage.getItem("decryptedCategories")) {
+        return JSON.parse(sessionStorage.getItem("decryptedCategories"));
+    }
+
     const categoriesDB = new PouchDB("categories");
     let categoryResults = await categoriesDB.allDocs({ include_docs: true });
-    console.log(categoryResults)
     if (categoryResults.total_rows === 0) {
         await createNewCategoriesFromParams(PouchDB, openpgp, params, password);
         categoryResults = await categoriesDB.allDocs({ include_docs: true });
-        console.log(categoryResults)
-        setTimeout(async () => {
-            console.log(await categoriesDB.allDocs({ include_docs: true }))
-        }, 0);
     }
-    if (!sessionStorage.getItem("decryptedCategories")) {
-        console.log(categoryResults)
-        categoryResults = await decryptAllDocs(openpgp, categoryResults.rows, password);
-        sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.flatMap(c => c.doc)));
-    }
-    return JSON.parse(sessionStorage.getItem("decryptedCategories"));
+    console.log(categoryResults);
+    // const categoriesDB = new PouchDB("categories");
+    // let categoryResults = await categoriesDB.allDocs({ include_docs: true });
+    // console.log(categoryResults)
+    // if (categoryResults.total_rows === 0) {
+    //     await createNewCategoriesFromParams(PouchDB, openpgp, params, password);
+    //     categoryResults = await categoriesDB.allDocs({ include_docs: true });
+    //     console.log(categoryResults)
+    //     setTimeout(async () => {
+    //         console.log(await categoriesDB.allDocs({ include_docs: true }))
+    //     }, 0);
+    // }
+    // if (!sessionStorage.getItem("decryptedCategories")) {
+    //     console.log(categoryResults)
+    //     categoryResults = await decryptAllDocs(openpgp, categoryResults.rows, password);
+    //     sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.flatMap(c => c.doc)));
+    // }
+    // return JSON.parse(sessionStorage.getItem("decryptedCategories"));
 }
 
 export async function getTransactionsForCategory(PouchDB, openpgp, category, start, end, password) {

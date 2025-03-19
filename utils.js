@@ -81,19 +81,20 @@ export async function getCategories(PouchDB, openpgp, params, password) {
         categoryResults = await categoriesDB.allDocs({ include_docs: true });
     }
     if (!sessionStorage.getItem("decryptedCategories")) {
-        await decryptAllDocs(categoryResults.rows, password);
+        categoryResults = await decryptAllDocs(categoryResults.rows, password);
         sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.rows.flatMap(c => c.doc)));
     }
     return JSON.parse(sessionStorage.getItem("decryptedCategories"));
 }
 
-export async function getTransactionsBetween(PouchDB, openpgp, start, end, password) {
+export async function getTransactionsForCategory(PouchDB, openpgp, category, start, end, password) {
     const transactionsDB = new PouchDB("transactions");
     const transactions = (await transactionsDB.allDocs({ include_docs: true, startkey: start, endkey: end })).rows;
     if (transactions.length === 0) {
         return [];
     }
-    return JSON.parse(await decryptAllDocs(openpgp, transactions, password));
+    const decryptedTransactions = await decryptAllDocs(openpgp, transactions, password);
+    return JSON.parse(decryptedTransactions.rows.flatMap(t => t.doc).filter(t => t.category === category));
 }
 
 export function getNextOrPreviousMonth(budgetMonth, next = true) {

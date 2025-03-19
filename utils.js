@@ -96,9 +96,9 @@ export async function getTransactionsBetween(PouchDB, openpgp, start, end, passw
     return JSON.parse(await decryptAllDocs(openpgp, transactions, password));
 }
 
-export function getNextOrPreviousMonth(next = true) {
+export function getNextOrPreviousMonth(budgetMonth, next = true) {
     const increment = next ? 1 : -1;
-    const date = new Date(`${params.get("budgetMonth")}, 1 1970`);
+    const date = new Date(`${budgetMonth}, 1 1970`);
     date.setMonth(date.getMonth() + increment);
     return `${date.toLocaleString("default", { month: "long" })}_${date.getFullYear()}`;
 }

@@ -78,6 +78,7 @@ async function createNewCategoriesFromParams(PouchDB, openpgp, params, password)
     }
 
     const categoriesDB = new PouchDB("categories");
+    console.log(await categoriesDB.allDocs({ include_docs: true }))
     const categories = json.categories;
     const docs = [];
     for (let c = 0; c < categories.length; c++) {
@@ -113,6 +114,8 @@ async function createNewCategoriesFromParams(PouchDB, openpgp, params, password)
     if (resultSet.includes(undefined)) {
         throw new Error("Failed to save categories to DB.");
     }
+
+    console.log(await categoriesDB.allDocs({ include_docs: true }))
 }
 
 async function decryptDoc(openpgp, doc, password) {

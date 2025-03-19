@@ -13,7 +13,60 @@ export async function saveBudget(PouchDB, openpgp, event, password) {
     budgetDB.put(budget);
 }
 
-export async function createNewCategoriesFromParams(PouchDB, openpgp, params, password) {
+export async function getCurrentBudget(PouchDB, openpgp, params, password) {
+    const budgetDB = new PouchDB("budgets");
+    const budgetMonth = params.get("budgetMonth");
+    // There should only be one budget per month so use the first one
+    const budget = (await budgetDB.allDocs({ include_docs: true, startkey: budgetMonth, endkey: `${budgetMonth}\ufff0` })).rows[0]?.doc.budget
+
+    if (!budget) {
+        console.log("Could not find document. Loading empty budget...")
+        return [];
+    }
+
+    const decryptedBudget = await decryptText(openpgp, budget, password)
+    return JSON.parse(decryptedBudget);
+}
+
+export async function getCategories(PouchDB, openpgp, params, password) {
+    const categoriesDB = new PouchDB("categories");
+    let categoryResults = await categoriesDB.allDocs({ include_docs: true });
+    if (categoryResults.total_rows === 0) {
+        await createNewCategoriesFromParams(PouchDB, openpgp, params, password);
+        categoryResults = await categoriesDB.allDocs({ include_docs: true });
+    }
+    if (!sessionStorage.getItem("decryptedCategories")) {
+        categoryResults = await decryptAllDocs(openpgp, categoryResults.rows, password);
+        sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.flatMap(c => c.doc)));
+    }
+    return JSON.parse(sessionStorage.getItem("decryptedCategories"));
+}
+
+export async function getTransactionsForCategory(PouchDB, openpgp, category, start, end, password) {
+    const transactionsDB = new PouchDB("transactions");
+    const transactions = (await transactionsDB.allDocs({ include_docs: true, startkey: start, endkey: end })).rows;
+    if (transactions.length === 0) {
+        return [];
+    }
+    const decryptedTransactions = await decryptAllDocs(openpgp, transactions, password);
+    return JSON.parse(decryptedTransactions.flatMap(t => t.doc).filter(t => t.category === category));
+}
+
+export function getNextOrPreviousMonth(budgetMonth, next = true) {
+    const increment = next ? 1 : -1;
+    const date = new Date(`${budgetMonth}, 1 1970`);
+    date.setMonth(date.getMonth() + increment);
+    return `${date.toLocaleString("default", { month: "long" })}_${date.getFullYear()}`;
+}
+
+export async function decryptAllDocs(openpgp, rows, password) {
+    console.log(rows)
+    const flatRows = rows.flatMap(r => r.doc)
+    console.log(flatRows)
+    await Promise.all(flatRows.map(async d => await decryptDoc(openpgp, d, password)));
+}
+
+async function createNewCategoriesFromParams(PouchDB, openpgp, params, password) {
     const rawJSON = params.get("json");
     const json = JSON.parse(rawJSON);
     if (json.poisedBudgetVersion !== "0.0.1") {
@@ -56,59 +109,6 @@ export async function createNewCategoriesFromParams(PouchDB, openpgp, params, pa
     if (resultSet.includes(undefined)) {
         throw new Error("Failed to save categories to DB.");
     }
-}
-
-export async function getCurrentBudget(PouchDB, openpgp, params, password) {
-    const budgetDB = new PouchDB("budgets");
-    const budgetMonth = params.get("budgetMonth");
-    // There should only be one budget per month so use the first one
-    const budget = (await budgetDB.allDocs({ include_docs: true, startkey: budgetMonth, endkey: `${budgetMonth}\ufff0` })).rows[0]?.doc.budget
-
-    if (!budget) {
-        console.log("Could not find document. Loading empty budget...")
-        return [];
-    }
-
-    const decryptedBudget = await decryptText(openpgp, budget, password)
-    return JSON.parse(decryptedBudget);
-}
-
-export async function getCategories(PouchDB, openpgp, params, password) {
-    const categoriesDB = new PouchDB("categories");
-    let categoryResults = await categoriesDB.allDocs({ include_docs: true });
-    if (categoryResults.total_rows === 0) {
-        createNewCategoriesFromParams(PouchDB, openpgp, params, password);
-        categoryResults = await categoriesDB.allDocs({ include_docs: true });
-    }
-    if (!sessionStorage.getItem("decryptedCategories")) {
-        categoryResults = await decryptAllDocs(openpgp, categoryResults.rows, password);
-        sessionStorage.setItem("decryptedCategories", JSON.stringify(categoryResults.flatMap(c => c.doc)));
-    }
-    return JSON.parse(sessionStorage.getItem("decryptedCategories"));
-}
-
-export async function getTransactionsForCategory(PouchDB, openpgp, category, start, end, password) {
-    const transactionsDB = new PouchDB("transactions");
-    const transactions = (await transactionsDB.allDocs({ include_docs: true, startkey: start, endkey: end })).rows;
-    if (transactions.length === 0) {
-        return [];
-    }
-    const decryptedTransactions = await decryptAllDocs(openpgp, transactions, password);
-    return JSON.parse(decryptedTransactions.flatMap(t => t.doc).filter(t => t.category === category));
-}
-
-export function getNextOrPreviousMonth(budgetMonth, next = true) {
-    const increment = next ? 1 : -1;
-    const date = new Date(`${budgetMonth}, 1 1970`);
-    date.setMonth(date.getMonth() + increment);
-    return `${date.toLocaleString("default", { month: "long" })}_${date.getFullYear()}`;
-}
-
-export async function decryptAllDocs(openpgp, rows, password) {
-    console.log(rows)
-    const flatRows = rows.flatMap(r => r.doc)
-    console.log(flatRows)
-    await Promise.all(flatRows.map(async d => await decryptDoc(openpgp, d, password)));
 }
 
 async function decryptDoc(openpgp, doc, password) {

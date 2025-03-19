@@ -38,7 +38,7 @@ export async function getCategories(PouchDB, openpgp, params, password) {
         console.log(categoryResults)
         setTimeout(async () => {
             console.log(await categoriesDB.allDocs({ include_docs: true }))
-        }, 5000);
+        }, 0);
     }
     if (!sessionStorage.getItem("decryptedCategories")) {
         console.log(categoryResults)
